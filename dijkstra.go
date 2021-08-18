@@ -8,30 +8,44 @@ import (
 	"sort"
 )
 
+/** Defined by a Label and a distance (default 0), the minimum distance from the starting node. */
 type Vertex struct {
 	Label    string
 	Distance int32
 }
 
+/** Defined by two vertices and a value representing the edge's length. */
 type Edge struct {
 	Start *Vertex
 	End   *Vertex
 	Value int32
 }
 
+/**
+For a graph defined by vertices v and edges e, returns the cheapest path between origin and destination.
+*/
 func dijkstra(origin *Vertex, destination *Vertex, v []*Vertex, e []*Edge) []string {
+	// Forcing our origin to start at distance 0 (in case of the algorithm running multiple times on the same data)
 	origin.Distance = 0
-	heap := VertexQueue{Elements: []*Vertex{origin}}
+
+	// Initialisation of various Queues
+	queue := VertexQueue{Elements: []*Vertex{origin}}
 	visited := VertexQueue{Elements: []*Vertex{}}
 	node, err := &Vertex{}, errors.New("")
 
-	for heap.Size() > 0 {
-		node, err = heap.Pop()
+	// Iterate over all of the elements of the queue until there are no more vertices (max O(len(v)))
+	for queue.Size() > 0 {
+		// Always work on what is closest to the current vertex in the queue.
+		node, err = queue.Pop()
 		if err != nil {
 			fmt.Println(errors.New("no nodes in queue"))
 			os.Exit(3)
 		}
+
+		// Avoid repetitions
 		visited.Append(node)
+
+		// Filtering out the edges that are linked to the current node
 		filteredEdges := make([]*Edge, 0, len(e))
 		for _, edge := range e {
 			if edge.Start.Label == node.Label || edge.End.Label == node.Label {
@@ -39,6 +53,7 @@ func dijkstra(origin *Vertex, destination *Vertex, v []*Vertex, e []*Edge) []str
 			}
 		}
 
+		// Sorting the edges by distance
 		sort.Slice(filteredEdges, func(i, j int) bool {
 			return filteredEdges[i].Value > filteredEdges[j].Value
 		})
@@ -47,7 +62,7 @@ func dijkstra(origin *Vertex, destination *Vertex, v []*Vertex, e []*Edge) []str
 		if len(filteredEdges) == 1 &&
 			(filteredEdges[0].Start != origin && filteredEdges[0].End != destination &&
 				filteredEdges[0].Start != destination && filteredEdges[0].End != origin) {
-			// Count the amount of times said node
+			// Set the node to be unreachable by the backtrace
 			for _, edge := range e {
 				filteredEdges[0].Value = math.MaxInt32
 				if edge.Start == filteredEdges[0].Start || edge.End == filteredEdges[0].Start {
@@ -61,6 +76,7 @@ func dijkstra(origin *Vertex, destination *Vertex, v []*Vertex, e []*Edge) []str
 		} else {
 			// Iterate on all available edges.
 			for _, edge := range filteredEdges {
+				// Determine the actual direction of the edge.
 				start, end := &Vertex{}, &Vertex{}
 				if edge.Start.Label == node.Label {
 					start = edge.Start
@@ -70,32 +86,35 @@ func dijkstra(origin *Vertex, destination *Vertex, v []*Vertex, e []*Edge) []str
 					end = edge.Start
 				}
 
+				// If end distance not yet set.
 				if end.Label != origin.Label && ((end.Distance == 0 && end.Distance < start.Distance+edge.Value) || (end.Distance > start.Distance+edge.Value)) {
 					end.Distance = start.Distance + edge.Value
 				}
 
+				// If arrival at destination, empty queue.
 				if node.Label == destination.Label {
-					heap.DequeueWhere(func(v Vertex) bool { return true })
-				} else if !visited.Contains(*end) && ((heap.Contains(*end) && heap.FilterWhere(func(v Vertex) bool { return v.Label == end.Label })[0].Distance > end.Distance) || !heap.Contains(*end)) {
-					heap.Append(end)
+					queue.DequeueWhere(func(v Vertex) bool { return true })
+					// Otherwise append all further nodes to the queue.
+				} else if !visited.Contains(*end) && ((queue.Contains(*end) && queue.FilterWhere(func(v Vertex) bool { return v.Label == end.Label })[0].Distance > end.Distance) || !queue.Contains(*end)) {
+					queue.Append(end)
 				}
 			}
-
 		}
 
-		sort.Slice(heap.Elements, func(i, j int) bool {
-			return heap.Elements[i].Distance > heap.Elements[j].Distance
+		sort.Slice(queue.Elements, func(i, j int) bool {
+			return queue.Elements[i].Distance > queue.Elements[j].Distance
 		})
 	}
 
+	// Path of labels for the trace.
 	path := []*Vertex{destination}
-	heap2 := VertexQueue{Elements: []*Vertex{destination}}
+	queue = VertexQueue{Elements: []*Vertex{destination}}
 	visited = VertexQueue{Elements: []*Vertex{}}
 	node, err = &Vertex{}, errors.New("")
 
 	// Backtrace
-	for heap2.Size() > 0 {
-		node, err = heap2.Pop()
+	for queue.Size() > 0 {
+		node, err = queue.Pop()
 		if err != nil {
 			fmt.Println(errors.New("no nodes in queue"))
 			os.Exit(3)
@@ -123,22 +142,25 @@ func dijkstra(origin *Vertex, destination *Vertex, v []*Vertex, e []*Edge) []str
 			}
 
 			if node.Label == origin.Label {
-				heap2.DequeueWhere(func(_ Vertex) bool { return true })
-			} else if !visited.Contains(*end) && !heap2.Contains(*end) && start.Distance-end.Distance == edge.Value {
-				heap2.Append(end)
+				queue.DequeueWhere(func(_ Vertex) bool { return true })
+			} else if !visited.Contains(*end) && !queue.Contains(*end) && start.Distance-end.Distance == edge.Value {
+				// If the node hasn't been visited and isn't planned for visit yet, and that the edge value corresponds to the delta of the distance from the start.
+				queue.Append(end)
 				path = append(path, end)
 			}
 		}
 
-		sort.Slice(heap2.Elements, func(i, j int) bool {
-			return heap2.Elements[i].Distance > heap2.Elements[j].Distance
+		sort.Slice(queue.Elements, func(i, j int) bool {
+			return queue.Elements[i].Distance > queue.Elements[j].Distance
 		})
 	}
 
+	// Reverse the path to obtain the path in the right direction.
 	for i, j := 0, len(path)-1; i < j; i, j = i+1, j-1 {
 		path[i], path[j] = path[j], path[i]
 	}
 
+	// Format to string
 	result := []string{}
 	for _, vertex := range path {
 		result = append(result, vertex.Label)
