@@ -1,7 +1,11 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"math"
+	"os"
+	"sort"
 )
 
 type Vertex struct {
@@ -10,37 +14,86 @@ type Vertex struct {
 }
 
 type Edge struct {
-	Start Vertex
-	End   Vertex
+	Start *Vertex
+	End   *Vertex
 	Value int32
 }
 
-type SortByEdgeValue []Edge
-
-func (a SortByEdgeValue) Len() int           { return len(a) }
-func (a SortByEdgeValue) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a SortByEdgeValue) Less(i, j int) bool { return a[i].Value < a[j].Value }
-
-func dijkstra(origin Vertex, destination Vertex, v []Vertex, e []Edge) []string {
+func dijkstra(origin *Vertex, destination *Vertex, v []*Vertex, e []*Edge) []string {
 	fmt.Println("Starting")
 	origin.Distance = 0
-	heap := make(chan Vertex)
-	heap <- origin
-	visited := make([]Vertex, len(v))
-	node := Vertex{Label: "", Distance: 0}
+	heap := VertexQueue{Elements: []*Vertex{origin}}
+	visited := VertexQueue{Elements: []*Vertex{}}
+	node, err := &Vertex{}, errors.New("")
 
-	for len(heap) != 0 {
-		node = <-heap
-		visited = append(visited, node)
-		filteredEdges := make([]Edge, 0, len(e))
+	for heap.Size() > 0 {
+		node, err = heap.Pop()
+		fmt.Printf(`Node %v`, node)
+		fmt.Println()
+		if err != nil {
+			fmt.Println(errors.New("no nodes in queue"))
+			os.Exit(3)
+		}
+		visited.Append(node)
+		filteredEdges := make([]*Edge, 0, len(e))
 		for _, edge := range e {
 			if edge.Start.Label == node.Label || edge.End.Label == node.Label {
 				filteredEdges = append(filteredEdges, edge)
 			}
 		}
-		filteredEdges = SortByEdgeValue(filteredEdges)
-		fmt.Println(filteredEdges)
+
+		sort.Slice(filteredEdges, func(i, j int) bool {
+			return filteredEdges[i].Value > filteredEdges[j].Value
+		})
+
+		// If the vertex is a well
+		if len(filteredEdges) == 1 &&
+			(filteredEdges[0].Start != origin && filteredEdges[0].End != destination &&
+				filteredEdges[0].Start != destination && filteredEdges[0].End != origin) {
+			// Count the amount of times said node
+			for _, edge := range e {
+				if edge.Start == filteredEdges[0].Start || edge.End == filteredEdges[0].Start {
+					filteredEdges[0].Start.Distance = math.MaxInt32
+				} else if edge.End == filteredEdges[0].End || edge.Start == filteredEdges[0].End {
+					filteredEdges[0].End.Distance = math.MaxInt32
+				}
+				filteredEdges[0].Value = math.MaxInt32
+			}
+		} else {
+			// Iterate on all available edges.
+			for _, edge := range filteredEdges {
+				start, end := &Vertex{}, &Vertex{}
+				if edge.Start.Label == node.Label {
+					start = edge.Start
+					end = edge.End
+				} else {
+					start = edge.End
+					end = edge.Start
+				}
+
+				if end.Label != origin.Label && ((end.Distance == 0 && end.Distance < start.Distance+edge.Value) || (end.Distance > start.Distance+edge.Value)) {
+					end.Distance = start.Distance + edge.Value
+				}
+
+				if node.Label == destination.Label {
+					heap.DequeueWhere(func(v Vertex) bool { return true })
+				} else if !visited.Contains(*end) && ((heap.Contains(*end) && heap.FilterWhere(func(v Vertex) bool { return v.Label == end.Label })[0].Distance > end.Distance) || !heap.Contains(*end)) {
+					heap.Append(end)
+				}
+			}
+
+		}
+
+		sort.Slice(heap.Elements, func(i, j int) bool {
+			return heap.Elements[i].Distance > heap.Elements[j].Distance
+		})
+
+		for _, vec := range v {
+			fmt.Println(*vec)
+		}
+
 	}
+
 	result := make([]string, len(e))
 	return result
 }
@@ -56,22 +109,22 @@ func main() {
 		Vertex{Label: "I", Distance: 0},
 		Vertex{Label: "J", Distance: 0}
 
-	vertices := []Vertex{a, b, c, d, f, g, h, i}
+	vertices := []*Vertex{&a, &b, &c, &d, &f, &g, &h, &i}
 
-	edges := []Edge{
-		Edge{Start: a, End: b, Value: 1},
-		Edge{Start: b, End: c, Value: 3},
-		Edge{Start: b, End: d, Value: 2},
-		Edge{Start: b, End: f, Value: 5},
-		Edge{Start: b, End: g, Value: 2},
-		Edge{Start: c, End: d, Value: 3},
-		Edge{Start: c, End: h, Value: 7},
-		Edge{Start: c, End: g, Value: 5},
-		Edge{Start: d, End: i, Value: 4},
-		Edge{Start: f, End: g, Value: 2},
-		Edge{Start: i, End: h, Value: 8},
-		Edge{Start: h, End: j, Value: 9},
+	edges := []*Edge{
+		{Start: &a, End: &b, Value: 1},
+		{Start: &b, End: &c, Value: 3},
+		{Start: &b, End: &d, Value: 2},
+		{Start: &b, End: &f, Value: 5},
+		{Start: &b, End: &g, Value: 2},
+		{Start: &c, End: &d, Value: 3},
+		{Start: &c, End: &h, Value: 7},
+		{Start: &c, End: &g, Value: 5},
+		{Start: &d, End: &i, Value: 4},
+		{Start: &f, End: &g, Value: 2},
+		{Start: &i, End: &h, Value: 8},
+		{Start: &h, End: &j, Value: 9},
 	}
 
-	fmt.Println(dijkstra(i, f, vertices, edges))
+	fmt.Println(dijkstra(&i, &f, vertices, edges))
 }
