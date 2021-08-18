@@ -82,7 +82,7 @@ func (queue *VertexQueue) FilterWhere(function func(Vertex) bool) []*Vertex {
 
 func (queue *VertexQueue) Contains(vertex Vertex) bool {
 	for _, v := range queue.Elements {
-		if vertex.Label == v.Label && vertex.Distance == v.Distance {
+		if vertex.Label == v.Label {
 			return true
 		}
 	}

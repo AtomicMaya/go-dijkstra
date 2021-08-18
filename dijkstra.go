@@ -20,7 +20,6 @@ type Edge struct {
 }
 
 func dijkstra(origin *Vertex, destination *Vertex, v []*Vertex, e []*Edge) []string {
-	fmt.Println("Starting")
 	origin.Distance = 0
 	heap := VertexQueue{Elements: []*Vertex{origin}}
 	visited := VertexQueue{Elements: []*Vertex{}}
@@ -28,8 +27,6 @@ func dijkstra(origin *Vertex, destination *Vertex, v []*Vertex, e []*Edge) []str
 
 	for heap.Size() > 0 {
 		node, err = heap.Pop()
-		fmt.Printf(`Node %v`, node)
-		fmt.Println()
 		if err != nil {
 			fmt.Println(errors.New("no nodes in queue"))
 			os.Exit(3)
@@ -52,12 +49,14 @@ func dijkstra(origin *Vertex, destination *Vertex, v []*Vertex, e []*Edge) []str
 				filteredEdges[0].Start != destination && filteredEdges[0].End != origin) {
 			// Count the amount of times said node
 			for _, edge := range e {
+				filteredEdges[0].Value = math.MaxInt32
 				if edge.Start == filteredEdges[0].Start || edge.End == filteredEdges[0].Start {
 					filteredEdges[0].Start.Distance = math.MaxInt32
+					break
 				} else if edge.End == filteredEdges[0].End || edge.Start == filteredEdges[0].End {
 					filteredEdges[0].End.Distance = math.MaxInt32
+					break
 				}
-				filteredEdges[0].Value = math.MaxInt32
 			}
 		} else {
 			// Iterate on all available edges.
@@ -87,14 +86,63 @@ func dijkstra(origin *Vertex, destination *Vertex, v []*Vertex, e []*Edge) []str
 		sort.Slice(heap.Elements, func(i, j int) bool {
 			return heap.Elements[i].Distance > heap.Elements[j].Distance
 		})
-
-		for _, vec := range v {
-			fmt.Println(*vec)
-		}
-
 	}
 
-	result := make([]string, len(e))
+	path := []*Vertex{destination}
+	heap2 := VertexQueue{Elements: []*Vertex{destination}}
+	visited = VertexQueue{Elements: []*Vertex{}}
+	node, err = &Vertex{}, errors.New("")
+
+	// Backtrace
+	for heap2.Size() > 0 {
+		node, err = heap2.Pop()
+		if err != nil {
+			fmt.Println(errors.New("no nodes in queue"))
+			os.Exit(3)
+		}
+		visited.Append(node)
+		filteredEdges := make([]*Edge, 0, len(e))
+		for _, edge := range e {
+			if (edge.Start.Label == node.Label || edge.End.Label == node.Label) && edge.Value != math.MaxInt32 {
+				filteredEdges = append(filteredEdges, edge)
+			}
+		}
+
+		sort.Slice(filteredEdges, func(i, j int) bool {
+			return filteredEdges[i].Value > filteredEdges[j].Value
+		})
+
+		for _, edge := range filteredEdges {
+			start, end := &Vertex{}, &Vertex{}
+			if edge.Start.Label == node.Label {
+				start = edge.Start
+				end = edge.End
+			} else {
+				start = edge.End
+				end = edge.Start
+			}
+
+			if node.Label == origin.Label {
+				heap2.DequeueWhere(func(_ Vertex) bool { return true })
+			} else if !visited.Contains(*end) && !heap2.Contains(*end) && start.Distance-end.Distance == edge.Value {
+				heap2.Append(end)
+				path = append(path, end)
+			}
+		}
+
+		sort.Slice(heap2.Elements, func(i, j int) bool {
+			return heap2.Elements[i].Distance > heap2.Elements[j].Distance
+		})
+	}
+
+	for i, j := 0, len(path)-1; i < j; i, j = i+1, j-1 {
+		path[i], path[j] = path[j], path[i]
+	}
+
+	result := []string{}
+	for _, vertex := range path {
+		result = append(result, vertex.Label)
+	}
 	return result
 }
 
