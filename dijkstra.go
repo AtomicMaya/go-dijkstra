@@ -25,8 +25,10 @@ type Edge struct {
 For a graph defined by vertices v and edges e, returns the cheapest path between origin and destination.
 */
 func dijkstra(origin *Vertex, destination *Vertex, v []*Vertex, e []*Edge) []string {
-	// Forcing our origin to start at distance 0 (in case of the algorithm running multiple times on the same data)
-	origin.Distance = 0
+	// Forcing our vertices to start at distance 0 (in case of the algorithm running multiple times on the same data)
+	for _, vertex := range v {
+		vertex.Distance = 0
+	}
 
 	// Initialisation of various Queues
 	queue := VertexQueue{Elements: []*Vertex{origin}}
@@ -196,5 +198,7 @@ func main() {
 		{Start: &h, End: &j, Value: 9},
 	}
 
+	fmt.Println(dijkstra(&i, &f, vertices, edges))
+	fmt.Println(dijkstra(&i, &f, vertices, edges))
 	fmt.Println(dijkstra(&i, &f, vertices, edges))
 }
