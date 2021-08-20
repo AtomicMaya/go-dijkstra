@@ -66,7 +66,6 @@ func dijkstra(origin *Vertex, destination *Vertex, v []*Vertex, e []*Edge) []str
 				filteredEdges[0].Start != destination && filteredEdges[0].End != origin) {
 			// Set the node to be unreachable by the backtrace
 			for _, edge := range e {
-				filteredEdges[0].Value = math.MaxInt32
 				if edge.Start == filteredEdges[0].Start || edge.End == filteredEdges[0].Start {
 					filteredEdges[0].Start.Distance = math.MaxInt32
 					break
@@ -112,7 +111,7 @@ func dijkstra(origin *Vertex, destination *Vertex, v []*Vertex, e []*Edge) []str
 	path := []*Vertex{destination}
 	queue = VertexQueue{Elements: []*Vertex{destination}}
 	visited = VertexQueue{Elements: []*Vertex{}}
-	node, err = &Vertex{}, errors.New("")
+	node = &Vertex{}
 
 	// Backtrace
 	for queue.Size() > 0 {
@@ -199,6 +198,6 @@ func main() {
 	}
 
 	fmt.Println(dijkstra(&i, &f, vertices, edges))
-	fmt.Println(dijkstra(&i, &f, vertices, edges))
-	fmt.Println(dijkstra(&i, &f, vertices, edges))
+	fmt.Println(dijkstra(&i, &i, vertices, edges))
+	fmt.Println(dijkstra(&a, &h, vertices, edges))
 }
